@@ -1,25 +1,18 @@
 import ballerina/http;
 import ballerina/log;
+import ballerina/encoding;
 import ballerinax/googleapis_drive as drive;
 import ballerinax/googleapis_gmail as gmail;
 import ballerinax/googleapis_gmail.'listener as gmailListener;
 
-// Event Trigger class
-public class EventTrigger {
-    public isolated function onNewSheetCreatedEvent(string fileId) {}
-
-    public isolated function onSheetDeletedEvent(string fileId) {}
-
-    public isolated function onFileUpdateEvent(string fileId) {}
-}
-
 // Google Drive client configuration
 configurable http:OAuth2DirectTokenConfig & readonly driveOauthConfig = ?;
+configurable string & readonly parentFolder = ?;
 
 // Gmail client configuration
 configurable http:OAuth2DirectTokenConfig & readonly gmailOauthConfig = ?;
 configurable int & readonly port = ?;
-configurable string & readonly topicName = ?;//////////
+configurable string & readonly topicName = ?;
 
 // Initialize Google Drive client 
 drive:Configuration driveClientConfiguration = {
@@ -41,7 +34,7 @@ gmail:Client gmailClient = new (gmailClientConfiguration);
 listener gmailListener:Listener gmailEventListener = new(port, gmailClient, topicName);
 
 service / on gmailEventListener {
-    resource function post web(http:Caller caller, http:Request req) {
+    resource function post subscription(http:Caller caller, http:Request req) returns error? {
         var payload = req.getJsonPayload();
         var response = gmailEventListener.onMailboxChanges(caller , req);
         if(response is gmail:MailboxHistoryPage) {
@@ -49,13 +42,13 @@ service / on gmailEventListener {
             if(triggerResponse is gmail:MessageBodyPart[]) {
                 if (triggerResponse.length()>0){
                     foreach var attachment in triggerResponse {
-                        //log:print("Attachment Size: "+attachment.size);
+                        byte[] attachmentByteArray = check encoding:decodeBase64Url(attachment.body);
 
-                        drive:File|error fileResponse = driveClient->createFile(attachment.body);
+                        drive:File|error fileResponse = driveClient->uploadFileUsingByteArray(attachmentByteArray, 
+                            attachment.fileName, parentFolder);
 
                         if (fileResponse is drive:File) {
                             string id = fileResponse?.id.toString();
-                            log:print(id);
                             log:print("Successfully added the file to the Google Drive");
                         } else {
                             log:printError(fileResponse.message());

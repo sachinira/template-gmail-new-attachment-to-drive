@@ -1,6 +1,6 @@
 [package]
 org = "sachinira"
-name = "template_gsheet_updaterow_to_gmail"
+name = "gmail_new_attachment_to_drive"
 version = "0.1.0"
 
 [build-options]
@@ -8,10 +8,10 @@ observabilityIncluded = true
 
 [[dependency]]
 org = "ballerinax"
-name = "googleapis_sheets"
-version = "0.99.7"
+name = "googleapis_gmail"
+version = "0.99.5"
 
 [[dependency]]
 org = "ballerinax"
-name = "googleapis_gmail"
-version = "0.99.5"
+name = "googleapis_drive"
+version = "0.1.0"
